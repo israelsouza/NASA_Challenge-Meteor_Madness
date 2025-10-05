@@ -9,7 +9,7 @@ const KM_PER_AU = 149597870.7; // 1 Unidade Astronômica em km
 const router = express.Router();
 
 router.get("/meteor", (req, res) => {
-  const { asteroid = "Apophis" } = req.query;
+  const { asteroid = "Apophis", latCustom, lonCustom } = req.query;
 
   const params = new URLSearchParams();
   params.set("fields", "full_name,diameter,a,e,i,om,w,tp");
@@ -164,6 +164,55 @@ router.get("/meteor", (req, res) => {
       );
 
       console.log("Lat/Lon calculados:", lat, lon);
+
+      const finalLat = latCustom ? parseFloat(latCustom) : lat;
+      const finalLon = lonCustom ? parseFloat(lonCustom) : lon;
+
+      async function getElevation(lat, lon) {
+        try {
+          // Tente USGS primeiro
+          const usgsResponse = await fetch(
+            `https://nationalmap.gov/epqs/pqs.php?x=${lon}&y=${lat}&units=Meters&output=json`
+          );
+          if (usgsResponse.ok) {
+            const data = await usgsResponse.json();
+            if (data && data.USGS_Elevation_Point_Query_Service) {
+              return data.USGS_Elevation_Point_Query_Service.Elevation_Query
+                .Elevation;
+            }
+          }
+        } catch (error) {
+          console.warn("USGS falhou, tentando Open-Elevation...");
+        }
+
+        try {
+          // Fallback para Open-Elevation
+          const openElevationResponse = await fetch(
+            `https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`
+          );
+          if (openElevationResponse.ok) {
+            const data = await openElevationResponse.json();
+            if (data && data.results && data.results.length > 0) {
+              return data.results[0].elevation;
+            }
+          }
+        } catch (error) {
+          console.error("Open-Elevation também falhou:", error);
+        }
+
+        // Fallback final: 0 (oceano)
+        console.warn("Ambas as APIs falharam, assumindo oceano (elevation=0)");
+        return 0;
+      }
+
+      let elevation = elevacaoCustom
+        ? parseFloat(elevacaoCustom)
+        : await getElevation(finalLat, finalLon);
+      console.log("Elevation:", elevation);
+
+      // falta calculo para desastre natural
+      // mitigação
+      // raio afetado pelo asteroide
 
       return res.status(200).json({ data: ASTEROIDE });
     })
