@@ -6,7 +6,7 @@ const PORT = 3000;
 const app = express();
 
 const corsOptions = {
-  origin: ["http://localhost:3000","https://teste-teamplate-vercel-html-node.vercel.app"],
+  origin: ["http://localhost:5173","https://teste-teamplate-vercel-html-node.vercel.app"],
   methods: ["GET", "POST"],
   optionsSuccessStatus: 200, // Algumas versões do Express precisam disso
 };

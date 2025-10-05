@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
+import Asteroide from "./Asteroide";
 import styles from "@styles/Mapa.module.css";
+import ImpactoModal from "./ImpactoModal";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAP_BOXGL;
 
@@ -10,9 +12,64 @@ const Mapa = () => {
 
   const [mostrarMapa, setMostrarMapa] = useState(true);
   const [impactLocation, setImpactLocation] = useState(null);
-  
+
   const [asteroid, setAsteroid] = useState(null);
 
+  const deltaVelocidadeRef = useRef(null);
+
+  const [modalAberto, setModalAberto] = useState(false);
+  const [deltaVelocidade, setDeltaVelocidade] = useState(1);
+  const [tipoMitigacao, setTipoMitigacao] = useState("kinetic");
+  const [distanciaTsunami, setDistanciaTsunami] = useState(0);
+
+  const [resultado, setResultado] = useState(null);
+
+  async function getAsteroidInfos() {
+    const lat = impactLocation.lat;
+    const lng = impactLocation.lng;
+
+    const cacheKey = `${lat}-${lng}-${asteroid}-${deltaVelocidade}-${tipoMitigacao}-${distanciaTsunami}`;
+    const cachedData = localStorage.getItem(cacheKey);
+    const cacheTime = localStorage.getItem(`${cacheKey}-time`);
+    const now = Date.now();
+    const cacheDuration = 60 * 60 * 500;
+
+    if (cachedData && cacheTime && now - parseInt(cacheTime) < cacheDuration) {
+      console.log("Usando dados do cache");
+      setResultado(JSON.parse(cachedData));
+      setModalAberto(true);
+      return;
+    }
+
+    try {
+      const params = new URLSearchParams();
+      params.set("latCustom", lat);
+      params.set("lonCustom", lng);
+      params.set("deltaVelocidade", deltaVelocidade);
+      params.set("asteroid", asteroid);
+      params.set("tipoMitigacao", tipoMitigacao);
+      params.set("distanciaTsunami", distanciaTsunami);
+
+      const endpoint = params.toString();
+      const response = await fetch(
+        `http://localhost:3000/api/meteor?${endpoint}`,
+        {
+          method: "GET",
+        }
+      );
+
+      const data = await response.json();
+      console.log("Dados do backend: ", data);
+
+      localStorage.setItem(cacheKey, JSON.stringify(data));
+      localStorage.setItem(`${cacheKey}-time`, now.toString());
+
+      setResultado(data);
+      setModalAberto(true);
+    } catch (error) {
+      console.log("Erro no fetch:", error);
+    }
+  }
 
   useEffect(() => {
     if (!mostrarMapa || map.current) return;
@@ -100,7 +157,7 @@ const Mapa = () => {
       <div ref={mapContainer} className={styles.mapa}></div>
       <div className={styles.menuLateral}>
         <h2 className={styles.tituloMenu}>Veja o impacto do asteroide</h2>
- 
+        <Asteroide />
         <div className={styles.informacoes}>
           <div>
             <span className={styles.negrito}>Configurações do asteroide</span>
@@ -115,6 +172,36 @@ const Mapa = () => {
               <option value="Bennu">Bennu</option>
               <option value="Ryugu">Ryugu</option>
             </select>
+          </div>
+          <div className={styles.linhaInfo}>
+            <span>Delta Velocidade (km/s):</span>
+            <input
+              ref={deltaVelocidadeRef}
+              onChange={(e) => setDeltaVelocidade(Number(e.target.value) || 0)}
+              value={deltaVelocidade}
+              type="number"
+              min={0}
+              step={0.01}
+            />
+          </div>
+          <div className={styles.linhaInfo}>
+            <span>Tipo de Mitigação:</span>
+            <select
+              value={tipoMitigacao}
+              onChange={(e) => setTipoMitigacao(e.target.value)}
+            >
+              <option value="kinetic">Kinetic Impactor</option>
+              <option value="gravity">Gravity Tractor</option>
+            </select>
+          </div>
+          <div className={styles.linhaInfo}>
+            <span>Distância Tsunami (km):</span>
+            <input
+              onChange={(e) => setDistanciaTsunami(Number(e.target.value) || 0)}
+              value={distanciaTsunami}
+              type="number"
+              min={0}
+            />
           </div>
 
           <br />
@@ -132,6 +219,7 @@ const Mapa = () => {
               alert("Insira um local primeiro para proseguir");
             } else {
               alert(`Asteroide lançado em ${impactLocation.name}!`);
+              getAsteroidInfos()
             }
           }}
         >
@@ -139,6 +227,11 @@ const Mapa = () => {
         </button>
         <div className={styles.instrucao}>selecione local de impacto</div>
       </div>
+      <ImpactoModal
+        isOpen={modalAberto}
+        onClose={() => setModalAberto(false)}
+        data={resultado}
+      />
     </div>
   );
 };
