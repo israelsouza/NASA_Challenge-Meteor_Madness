@@ -1,0 +1,16 @@
+{
+  "name": "meu-outro-projeto",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install:frontend": "cd web && npm install",
+    "install:backend": "cd api && npm install",
+    "build:frontend": "cd web && npm run build",
+    "build:backend": "cd api && npm run build",
+    "dev": "npm run dev --prefix web & npm run dev --prefix api"
+  },
+  "workspaces": [
+    "web",
+    "api"
+  ]
+}

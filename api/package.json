@@ -1,0 +1,29 @@
+{
+  "name": "backend",
+  "version": "0.0.0",
+  "main": "index.js",
+  "type": "module",
+  "imports": {
+    "#controller/*": "./controller/*",
+    "#model/*": "./model/*",
+    "#routes/*": "./routes/*",
+    "#utils/*": "./utils/*",
+    "#middleware/*": "./middleware/*"
+  },
+  "scripts": {
+    "server": "node --watch index.js",
+    "dev": "node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "globals": "^16.3.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
