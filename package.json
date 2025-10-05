@@ -1,5 +1,5 @@
 {
-  "name": "meu-outro-projeto",
+  "name": "nasa-challenge_meteor-madness",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -7,10 +7,21 @@
     "install:backend": "cd api && npm install",
     "build:frontend": "cd web && npm run build",
     "build:backend": "cd api && npm run build",
-    "dev": "npm run dev --prefix web & npm run dev --prefix api"
+    "dev": "concurrently --names \"FRONT,API\" --prefix-colors \"blue,magenta\" \"npm run dev --prefix web\" \"npm run server --prefix api\""
   },
   "workspaces": [
     "web",
     "api"
-  ]
+  ],
+  "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "concurrently": "^9.2.1",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.13"
+  },
+  "dependencies": {
+    "axios": "^1.12.2",
+    "framer-motion": "^12.23.19",
+    "mapbox-gl": "^3.15.0"
+  }
 }
