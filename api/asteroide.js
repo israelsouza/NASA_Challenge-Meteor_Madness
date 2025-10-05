@@ -17,7 +17,7 @@ router.get("/meteor", (req, res) => {
     tipoMitigacao = "kinetic",
     deltaVelocidade = 0,
     distanciaTsunami = 0,
-    elevacaoCustom
+    elevacaoCustom,
   } = req.query;
 
   const params = new URLSearchParams();
@@ -299,9 +299,44 @@ router.get("/meteor", (req, res) => {
         ASTEROIDE
       );
 
-      
+      // Nova função para magnitude sísmica (Richter)
+      function calcularMagnitudeSismica(energia) {
+        const energiaTNT = energia / 4.184e9;
+        return Math.log10(energiaTNT) - 4.8; // Fórmula aproximada
+      }
 
-      return res.status(200).json({ data: ASTEROIDE });
+      // Nova função para raio de ondas de choque (em km)
+      function calcularRaioOndasChoque(energia) {
+        const pressaoAr = 1e5; // Pa
+        return Math.sqrt(energia / pressaoAr) / 1000; // Converter m para km
+      }
+
+      const magnitudeSismica = calcularMagnitudeSismica(energia);
+      const raioOndasChoque = calcularRaioOndasChoque(energia);
+
+      const result = {
+        asteroidName: ASTEROIDE.name,
+        mass_kg: massa_kg,
+        velocity_km_s: velocidade_km_s,
+        position_km: {
+          x: pos_x_au * KM_PER_AU,
+          y: pos_y_au * KM_PER_AU,
+          z: pos_z_au * KM_PER_AU,
+        },
+        impacto: {
+          energiaCinetica: energia,
+          cratera: { diametro: cratera, unidade: "metros" },
+          tsunami: tsunami,
+          magnitudeSismica: magnitudeSismica,
+          raioOndasChoque: { raio: raioOndasChoque, unidade: "km" },
+          mitigacao: mitigacao,
+        },
+        location: { lat: finalLat, lon: finalLon, elevation_m: elevation },
+      };
+
+      console.log("Dados calculados:", result);
+
+      return res.status(200).json(result);
     })
     .catch((error) => {
       console.log("GET /apophis-data | ERRO AO exibir data do APOPHIS ");
