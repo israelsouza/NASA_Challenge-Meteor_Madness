@@ -5,11 +5,20 @@ const URL_NASA_GET = "https://ssd-api.jpl.nasa.gov/sbdb_query.api";
 
 const PI = Math.PI;
 const KM_PER_AU = 149597870.7; // 1 Unidade Astronômica em km
+const GM_SUN = 1.3271244e11; // gravitacional do Sol em km^3/s^2
 
 const router = express.Router();
 
 router.get("/meteor", (req, res) => {
-  const { asteroid = "Apophis", latCustom, lonCustom } = req.query;
+  const {
+    asteroid = "Apophis",
+    latCustom,
+    lonCustom,
+    tipoMitigacao = "kinetic",
+    deltaVelocidade = 0,
+    distanciaTsunami = 0,
+    elevacaoCustom
+  } = req.query;
 
   const params = new URLSearchParams();
   params.set("fields", "full_name,diameter,a,e,i,om,w,tp");
@@ -211,8 +220,86 @@ router.get("/meteor", (req, res) => {
       console.log("Elevation:", elevation);
 
       // falta calculo para desastre natural
-      // mitigação
-      // raio afetado pelo asteroide
+
+      let tsunami = { alturaInicial: 0, alturaPropagada: 0 };
+
+      function calcularTsunamiDetalhado(
+        energia,
+        elevacaoCosteira,
+        distancia = 0
+      ) {
+        const alturaInicial = Math.sqrt(energia / 1e12) - elevacaoCosteira;
+
+        const alturaPropagada =
+          distancia === 0
+            ? alturaInicial // Sem decaimento se distancia = 0
+            : alturaInicial * Math.exp(-distancia / 1000); // Decaimento simplificado
+        return {
+          alturaInicial: Math.max(0, alturaInicial), // Garante não negativo
+          alturaPropagada: Math.max(0, alturaPropagada), // Garante não negativo
+        };
+      }
+
+      if (elevation <= 0) {
+        // Só calcula tsunami se for oceano
+        const tsunamiDetalhado = calcularTsunamiDetalhado(
+          energia,
+          elevation,
+          distanciaTsunami
+        );
+        tsunami = tsunamiDetalhado;
+      } else {
+        console.warn(
+          "Impacto em terra (elevação > 0m) - Nenhum tsunami calculado."
+        );
+      }
+
+      console.log("Tsunami altura:", tsunami);
+
+      function simularMitigacaoAvancada(
+        velocidadeOriginal,
+        deltaVelocidade,
+        tipo
+      ) {
+        // Garantir que ambos sejam numbers
+        const velocidadeOriginalNum = Number(velocidadeOriginal) || 0;
+        const deltaVelocidadeNum = Number(deltaVelocidade) || 0;
+
+        let novaVelocidade = velocidadeOriginalNum;
+        let estrategia = "Nenhuma";
+        let probabilidadeSucesso = 0;
+        let desviado = false;
+
+        if (tipo === "kinetic") {
+          novaVelocidade = velocidadeOriginalNum + deltaVelocidadeNum; // Agora soma numbers
+          estrategia = "Kinetic Impactor";
+          probabilidadeSucesso = deltaVelocidadeNum > 0.01 ? 0.8 : 0.2;
+          desviado = deltaVelocidadeNum !== 0;
+        } else if (tipo === "gravity") {
+          novaVelocidade =
+            velocidadeOriginalNum - Math.abs(deltaVelocidadeNum) * 0.1;
+          estrategia = "Gravity Tractor";
+          probabilidadeSucesso =
+            Math.abs(deltaVelocidadeNum) > 0.005 ? 0.7 : 0.3;
+          desviado = deltaVelocidadeNum !== 0;
+        }
+
+        return {
+          novaVelocidade: Number(novaVelocidade.toFixed(10)), // Agora funciona
+          desviado,
+          estrategia,
+          probabilidadeSucesso,
+        };
+      }
+
+      const mitigacao = simularMitigacaoAvancada(
+        velocidade_km_s,
+        deltaVelocidade,
+        tipoMitigacao,
+        ASTEROIDE
+      );
+
+      
 
       return res.status(200).json({ data: ASTEROIDE });
     })
