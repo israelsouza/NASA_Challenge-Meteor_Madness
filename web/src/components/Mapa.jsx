@@ -13,7 +13,7 @@ const Mapa = () => {
   const [mostrarMapa, setMostrarMapa] = useState(true);
   const [impactLocation, setImpactLocation] = useState(null);
 
-  const [asteroid, setAsteroid] = useState(null);
+  const [asteroid, setAsteroid] = useState("Apophis");
 
   const deltaVelocidadeRef = useRef(null);
 
@@ -219,7 +219,7 @@ const Mapa = () => {
               alert("Insira um local primeiro para proseguir");
             } else {
               alert(`Asteroide lançado em ${impactLocation.name}!`);
-              getAsteroidInfos()
+              getAsteroidInfos();
             }
           }}
         >
