@@ -1,9 +1,9 @@
-
+import Mapa from "../components/Mapa";
 
 function Index() {
     return (
         <>
-
+            <Mapa />
         </>
     )
 }
