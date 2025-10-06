@@ -23,14 +23,14 @@ const ConfigSidebar = ({
 
   return (
     <aside className="sidebar">
-      <h2 className="sidebar-title">Veja o impacto do asteroide</h2>
+      <h2 className="sidebar-title">See the asteroid impact</h2>
 
       {AsteroideComponent && <AsteroideComponent />}
 
       <section className="config-section">
-        <h3 className="config-title">Configurações do asteroide</h3>
+        <h3 className="config-title">Asteroid Settings</h3>
 
-        <ConfigRow label="Asteroide:">
+        <ConfigRow label="Asteroid:">
           <select
             value={config.asteroid}
             onChange={(e) => handleChange("asteroid", e.target.value)}
@@ -44,7 +44,7 @@ const ConfigSidebar = ({
           </select>
         </ConfigRow>
 
-        <ConfigRow label="Delta Velocidade (km/s):">
+        <ConfigRow label="Delta Velocity (km/s):">
           <input
             type="number"
             min={0}
@@ -57,7 +57,7 @@ const ConfigSidebar = ({
           />
         </ConfigRow>
 
-        <ConfigRow label="Tipo de Mitigação:">
+        <ConfigRow label="Mitigation Type:">
           <select
             value={config.tipoMitigacao}
             onChange={(e) => handleChange("tipoMitigacao", e.target.value)}
@@ -71,7 +71,7 @@ const ConfigSidebar = ({
           </select>
         </ConfigRow>
 
-        <ConfigRow label="Distância Tsunami (km):">
+        <ConfigRow label="Tsunami Distance (km):">
           <input
             type="number"
             min={0}
@@ -84,22 +84,22 @@ const ConfigSidebar = ({
         </ConfigRow>
 
         <div className="impact-location">
-          <strong>Local do Impacto:</strong>
+          <strong>Impact Location:</strong>
           <div className="location-text">
-            {impactLocation ? impactLocation.name : "Selecione no mapa"}
+            {impactLocation ? impactLocation.name : "Select on map"}
           </div>
         </div>
       </section>
 
       <button onClick={onLaunch} className="btn-primary">
-        Jogar asteroide
+        Launch Asteroid
       </button>
 
       <button onClick={onReset} className="btn-secondary">
-        Resetar Visualização
+        Reset Visualization
       </button>
 
-      <p className="sidebar-hint">Selecione local de impacto</p>
+      <p className="sidebar-hint">Select impact location</p>
     </aside>
   );
 };

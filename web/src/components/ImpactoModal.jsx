@@ -2,24 +2,24 @@ import React from 'react';
 import styles from '@styles/ImpactoModal.module.css';
 
 const ImpactoModal = ({ isOpen, onClose, data }) => {
-  if (!isOpen || !data) return null;  // Não renderiza se fechado ou sem dados
+  if (!isOpen || !data) return null;  // Does not render if closed or without data
 
   return (
-    <div className={styles.overlay} onClick={onClose}>  {/* Overlay para fechar ao clicar fora */}
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>  {/* Modal, impede fechar ao clicar dentro */}
-        <h2>Resultados do Impacto com: <br /> {data.asteroidName}</h2>
+    <div className={styles.overlay} onClick={onClose}>  {/* Overlay to close when clicking outside */}
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>  {/* Modal, prevents closing when clicking inside */}
+        <h2>Impact Results with: <br /> {data.asteroidName}</h2>
         {data.impacto && (
           <div className={styles.content}>
-            <p><strong>Energia Cinética:</strong> {data.impacto.energiaCinetica.toExponential(2)} J</p>
-            <p><strong>Cratera:</strong> {data.impacto.cratera.diametro} metros</p>
-            <p><strong>Tsunami Inicial:</strong> {data.impacto.tsunami.alturaInicial.toFixed(2)} metros</p>
-            <p><strong>Tsunami Propagado:</strong> {data.impacto.tsunami.alturaPropagada.toFixed(2)} metros</p>
-            <p><strong>Magnitude Sísmica:</strong> {data.impacto.magnitudeSismica.toFixed(2)}</p>
-            <p><strong>Raio Ondas de Choque:</strong> {data.impacto.raioOndasChoque.raio.toFixed(2)} km</p>
-            <p><strong>Mitigação:</strong> {data.impacto.mitigacao.estrategia} - Probabilidade: {(data.impacto.mitigacao.probabilidadeSucesso * 100).toFixed(1)}%</p>
+            <p><strong>Kinetic Energy:</strong> {data.impacto.energiaCinetica.toExponential(2)} J</p>
+            <p><strong>Crater Diameter:</strong> {data.impacto.cratera.diametro} meters</p>
+            <p><strong>Initial Tsunami Height:</strong> {data.impacto.tsunami.alturaInicial.toFixed(2)} meters</p>
+            <p><strong>Propagated Tsunami Height:</strong> {data.impacto.tsunami.alturaPropagada.toFixed(2)} meters</p>
+            <p><strong>Seismic Magnitude:</strong> {data.impacto.magnitudeSismica.toFixed(2)}</p>
+            <p><strong>Shockwave Radius:</strong> {data.impacto.raioOndasChoque.raio.toFixed(2)} km</p>
+            <p><strong>Mitigation Strategy:</strong> {data.impacto.mitigacao.estrategia} - Success Probability: {(data.impacto.mitigacao.probabilidadeSucesso * 100).toFixed(1)}%</p>
           </div>
         )}
-        <button className={styles.closeButton} onClick={onClose}>Fechar</button>
+        <button className={styles.closeButton} onClick={onClose}>Close</button>
       </div>
     </div>
   );
