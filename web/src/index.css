@@ -9,13 +9,143 @@
   line-height: 1.5;
   font-weight: 400;
 
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-body,html{
+.center {
+  display: flex;
+  min-height: 100vh;
+  min-height: 100svh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+div.mapboxgl-ctrl, div.mapboxgl-ctrl-attrib, div.mapboxgl-ctrl-attrib-inner, div.mapboxgl-ctrl-top-right{
+  display: none;
+}
+
+.example {
+  margin: 10px auto;
+  background-color: rgb(131, 131, 224);
+  padding: 12px 24px;
+  border-radius: 25px;
+  cursor: pointer;
+  text-align: center;
+  width: fit-content;
+}
+
+.container {
+  display: flex;
+  height: 100vh;
+}
+
+.mapa {
+  flex: 1;
   height: 100%;
-  overflow: hidden; /* trava a rolagem */
+  width: 100%;
+}
+
+.menuLateral {
+  width: 320px;
+  background-color: #1a1a2e; /* Fundo escuro */
+  padding: 20px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.tituloMenu {
+  font-size: 1.125rem;
+  font-weight: bold;
+  color: #ffffff; /* Texto branco */
+  margin-bottom: 8px;
+}
+
+.asteroideContainer {
+  margin: 16px 0;
+}
+
+.informacoes {
+  width: 100%;
+  padding: 8px 0;
+  font-size: 0.875rem;
+  color: #e0e0e0; /* Texto claro */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.linhaInfo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  & input, select {
+    background-color: #2d2d44; /* Fundo escuro para inputs */
+    max-width: 100px;
+    border: 1px solid #4a4a6a; /* Borda sutil */
+    text-align: center;
+    color: #ffffff; /* Texto branco */
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  
+  & input:focus, select:focus {
+    outline: none;
+    border-color: #f97316; /* Destaque laranja no foco */
+  }
+  
+  & span {
+    color: #b0b0c8; /* Labels em cinza claro */
+  }
+}
+
+.negrito {
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.localizacao {
+  margin-top: 8px;
+  color: #e0e0e0;
+  text-align: center;
+  font-size: 0.875rem;
+  background-color: #2d2d44;
+  padding: 12px;
+  border-radius: 6px;
+  
+  & span {
+    color: #b0b0c8;
+  }
+}
+
+.botao {
+  width: 100%;
+  margin-top: 12px;
+  background-color: #f97316;
+  color: #fff;
+  font-weight: bold;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.botao:hover {
+  background-color: #ea580c;
+}
+
+.instrucao {
+  margin-top: 8px;
+  text-align: center;
+  color: #6a6a8a; /* Cinza mais escuro */
+  font-size: 0.75rem;
 }

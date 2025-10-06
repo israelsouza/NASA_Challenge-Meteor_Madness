@@ -1,0 +1,110 @@
+.sidebar {
+  width: 320px;
+  background-color: #1a1a2e;
+  padding: 20px;
+  overflow-y: auto;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.sidebar-title {
+  font-size: 1.125rem;
+  font-weight: bold;
+  color: #ffffff;
+  margin-bottom: 16px;
+}
+
+.config-section {
+  margin-bottom: 20px;
+}
+
+.config-title {
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #ffffff;
+  font-size: 0.95rem;
+}
+
+.config-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.config-label {
+  color: #b0b0c8;
+  font-size: 0.9rem;
+}
+
+.config-input {
+  background-color: #2d2d44;
+  max-width: 110px;
+  border: 1px solid #4a4a6a;
+  text-align: center;
+  color: #ffffff;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.config-input:focus {
+  outline: none;
+  border-color: #f97316;
+}
+
+.impact-location {
+  margin-top: 15px;
+  padding: 12px;
+  background-color: #2d2d44;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.impact-location strong {
+  color: #ffffff;
+}
+
+.location-text {
+  margin-top: 5px;
+  color: #e0e0e0;
+  font-size: 0.9rem;
+}
+
+.btn-primary,
+.btn-secondary {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: #f97316;
+  color: #ffffff;
+  font-size: 16px;
+}
+
+.btn-primary:hover {
+  background: #ea580c;
+}
+
+.btn-secondary {
+  background: #4a90e2;
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.btn-secondary:hover {
+  background: #357abd;
+}
+
+.sidebar-hint {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #6a6a8a;
+  margin-top: 8px;
+}

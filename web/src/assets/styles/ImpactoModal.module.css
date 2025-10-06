@@ -4,12 +4,12 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);  /* Fundo escuro */
+  background-color: rgba(0, 0, 0, 0.7); /* Fundo escuro */
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  color: black
+  color: black;
 }
 
 .modal {
@@ -44,4 +44,4 @@
 
 .closeButton:hover {
   background: #0056b3;
-}   
+}
