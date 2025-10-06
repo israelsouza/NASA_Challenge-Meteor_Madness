@@ -3,6 +3,7 @@ import mapboxgl from "mapbox-gl";
 import Asteroide from "./Asteroide";
 import styles from "@styles/Mapa.module.css";
 import ImpactoModal from "./ImpactoModal";
+import Mapa3D from "@components/Mapa3d.jsx";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAP_BOXGL;
 
@@ -27,6 +28,22 @@ const Mapa = () => {
   async function getAsteroidInfos() {
     const lat = impactLocation.lat;
     const lng = impactLocation.lng;
+
+    if (map.current && impactLocation) {
+      console.log("Fazendo zoom para:", lng, lat);
+
+      map.current.setProjection("mercator");
+
+      map.current.flyTo({
+        center: [lng, lat],
+        zoom: 16,
+        pitch: 70,
+        bearing: 30,
+        speed: 0.5,
+        curve: 1.4,
+        essential: true,
+      });
+    }
 
     const cacheKey = `${lat}-${lng}-${asteroid}-${deltaVelocidade}-${tipoMitigacao}-${distanciaTsunami}`;
     const cachedData = localStorage.getItem(cacheKey);
@@ -65,26 +82,47 @@ const Mapa = () => {
       localStorage.setItem(`${cacheKey}-time`, now.toString());
 
       setResultado(data);
-      setModalAberto(true);
+      setTimeout(() => {
+        setModalAberto(true);
+      }, 800);
     } catch (error) {
       console.log("Erro no fetch:", error);
+      setTimeout(() => {
+        setModalAberto(true);
+      }, 800);
     }
   }
+
+  const resetarVisualizacao = () => {
+    if (map.current) {
+      map.current.setProjection("globe");
+      map.current.flyTo({
+        center: [-47.93, -15.78],
+        zoom: 2.2,
+        pitch: 0,
+        bearing: 0,
+        speed: 0.6,
+        curve: 1.2,
+        essential: true,
+      });
+    }
+  };
 
   useEffect(() => {
     if (!mostrarMapa || map.current) return;
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: "mapbox://styles/mapbox/streets-v11",
+      style: "mapbox://styles/mapbox/streets-v12",
       center: [-47.93, -15.78],
       zoom: 2.2,
       projection: "globe",
+      antialias: true,
     });
 
     map.current.addControl(new mapboxgl.NavigationControl());
 
-    map.current.on("style.load", () => {
+    map.current.on("load", () => {
       map.current.setFog({
         color: "rgba(186, 210, 235, 0.6)",
         "high-color": "rgba(36, 92, 223, 0.6)",
@@ -92,7 +130,50 @@ const Mapa = () => {
         "horizon-blend": 0.2,
         "star-intensity": 0.2,
       });
+
+      const layers = map.current.getStyle().layers;
+      const labelLayerId = layers.find(
+        (layer) => layer.type === "symbol" && layer.layout["text-field"]
+      )?.id;
+
+      if (!map.current.getLayer("3d-buildings")) {
+        map.current.addLayer(
+          {
+            id: "3d-buildings",
+            source: "composite",
+            "source-layer": "building",
+            filter: ["==", "extrude", "true"],
+            type: "fill-extrusion",
+            minzoom: 15,
+            paint: {
+              "fill-extrusion-color": "#aaa",
+              "fill-extrusion-height": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                15,
+                0,
+                15.05,
+                ["get", "height"],
+              ],
+              "fill-extrusion-base": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                15,
+                0,
+                15.05,
+                ["get", "min_height"],
+              ],
+              "fill-extrusion-opacity": 0.6,
+            },
+          },
+          labelLayerId
+        );
+      }
     });
+
+    // Habilita prédios 3D
 
     map.current.on("click", (e) => {
       const { lng, lat } = e.lngLat;
@@ -132,21 +213,34 @@ const Mapa = () => {
       });
 
       setImpactLocation({
-        lng: lng.toFixed(2),
-        lat: lat.toFixed(2),
+        lng: lng,
+        lat: lat,
         name: `Lng: ${lng.toFixed(2)}, Lat: ${lat.toFixed(2)}`,
       });
     });
 
     return () => {
-      map.current.remove();
-      map.current = null;
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+      }
     };
   }, [mostrarMapa]);
 
   if (!mostrarMapa) {
     return (
-      <div className={styles.example} onClick={() => setMostrarMapa(true)}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          cursor: "pointer",
+          fontSize: "24px",
+          color: "#ffffff",
+        }}
+        onClick={() => setMostrarMapa(true)}
+      >
         Clique para carregar o Maps
       </div>
     );
@@ -224,6 +318,22 @@ const Mapa = () => {
           }}
         >
           Jogar asteroide
+        </button>
+        <button
+          onClick={resetarVisualizacao}
+          style={{
+            width: "100%",
+            padding: "10px",
+            background: "#4a90e2",
+            color: "#ffffff",
+            border: "none",
+            borderRadius: "4px",
+            fontSize: "14px",
+            cursor: "pointer",
+            marginBottom: "10px",
+          }}
+        >
+          Resetar Visualização
         </button>
         <div className={styles.instrucao}>selecione local de impacto</div>
       </div>

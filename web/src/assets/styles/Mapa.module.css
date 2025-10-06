@@ -16,11 +16,12 @@
 .mapa {
   flex: 1;
   height: 100%;
+  width: 100%;
 }
 
 .menuLateral {
   width: 320px;
-  background-color: #f4f4f4;
+  background-color: #1a1a2e;
   padding: 20px;
   box-sizing: border-box;
   overflow-y: auto;
@@ -29,7 +30,7 @@
 .tituloMenu {
   font-size: 1.125rem;
   font-weight: bold;
-  color: #1a202c;
+  color: #fff;
   margin-bottom: 8px;
 }
 
@@ -37,7 +38,7 @@
   width: 100%;
   padding: 8px 0;
   font-size: 0.875rem;
-  color: #4a5568;
+  color: #e0e0e0; /* Texto claro */
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -45,6 +46,7 @@
 
 .negrito {
   font-weight: 600;
+  color: #ffffff;
 }
 
 .linhaInfo {
@@ -54,21 +56,39 @@
 
   & select,
   input {
-    background-color: transparent;
+    background-color: #2d2d44; /* Fundo escuro para inputs */
     max-width: 100px;
-    border: 1px solid black;
+    border: 1px solid #4a4a6a; /* Borda sutil */
     text-align: center;
-    color: black;
+    color: #ffffff; /* Texto branco */
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+
+  & input:focus,
+  select:focus {
+    outline: none;
+    border-color: #f97316; /* Destaque laranja no foco */
+  }
+
+  & span {
+    color: #b0b0c8; /* Labels em cinza claro */
   }
 }
 
 .localizacao {
   margin-top: 8px;
-  color: #4a5568;
+  color: #e0e0e0;
   text-align: center;
   font-size: 0.875rem;
-}
+  background-color: #2d2d44;
+  padding: 12px;
+  border-radius: 6px;
 
+  & span {
+    color: #b0b0c8;
+  }
+}
 .botao {
   width: 100%;
   margin-top: 12px;
@@ -89,6 +109,6 @@
 .instrucao {
   margin-top: 8px;
   text-align: center;
-  color: #a0aec0;
+  color: #6a6a8a; /* Cinza mais escuro */
   font-size: 0.75rem;
 }
