@@ -26,44 +26,44 @@ export const useImpactSimulation = () => {
 
     try {
       // ===== MODO TESTE COM DADOS MOCKADOS =====
-      console.log(" USANDO DADOS MOCKADOS PARA TESTE");
+      // console.log(" USANDO DADOS MOCKADOS PARA TESTE");
 
       // Simula delay da API
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Dados de teste baseados na configuração
-      const mockData = {
-        asteroidName: config.asteroid,
-        impacto: {
-          energiaCinetica: 2.5e15,
-          cratera: {
-            diametro: 800,
-          },
-          tsunami: {
-            alturaInicial: 50.5,
-            alturaPropagada: 12.3,
-          },
-          magnitudeSismica: 7.2,
-          raioOndasChoque: {
-            raio: 25,
-          },
-          mitigacao: {
-            estrategia:
-              config.tipoMitigacao === "kinetic"
-                ? "Kinetic Impactor"
-                : "Gravity Tractor",
-            probabilidadeSucesso:
-              config.tipoMitigacao === "kinetic" ? 0.75 : 0.85,
-          },
-        },
-      };
+      // const mockData = {
+      //   asteroidName: config.asteroid,
+      //   impacto: {
+      //     energiaCinetica: 2.5e15,
+      //     cratera: {
+      //       diametro: 800,
+      //     },
+      //     tsunami: {
+      //       alturaInicial: 50.5,
+      //       alturaPropagada: 12.3,
+      //     },
+      //     magnitudeSismica: 7.2,
+      //     raioOndasChoque: {
+      //       raio: 25,
+      //     },
+      //     mitigacao: {
+      //       estrategia:
+      //         config.tipoMitigacao === "kinetic"
+      //           ? "Kinetic Impactor"
+      //           : "Gravity Tractor",
+      //       probabilidadeSucesso:
+      //         config.tipoMitigacao === "kinetic" ? 0.75 : 0.85,
+      //     },
+      //   },
+      // };
 
-      console.log("Dados mockados gerados:", mockData);
-      setResultado(mockData);
-      return mockData;
+      // console.log("Dados mockados gerados:", mockData);
+      // setResultado(mockData);
+      // return mockData;
 
       // ===== CÓDIGO ORIGINAL (DESCOMENTADO QUANDO BACKEND ESTIVER PRONTO) =====
-      /*
+      
       const params = new URLSearchParams({
         latCustom: impactLocation.lat,
         lonCustom: impactLocation.lng,
@@ -73,7 +73,9 @@ export const useImpactSimulation = () => {
         distanciaTsunami: config.distanciaTsunami
       });
 
-      const url = `/api/apophis-data?${params}`;
+      const URL_BASE = 'http://localhost:3000';
+
+      const url = `${URL_BASE}/api/meteor?${params}`;
       console.log('URL da requisição:', url);
 
       const response = await fetch(url);
@@ -91,7 +93,7 @@ export const useImpactSimulation = () => {
       
       setResultado(data);
       return data;
-      */
+      
     } catch (error) {
       console.error("Erro ao buscar dados do impacto:", error);
       console.error("Stack trace:", error.stack);
