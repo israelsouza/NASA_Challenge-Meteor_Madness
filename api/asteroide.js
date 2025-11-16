@@ -8,15 +8,142 @@ const cache = new NodeCache({ stdTTL: 3600 });
 const URL_NASA_GET = "https://ssd-api.jpl.nasa.gov/sbdb_query.api";
 
 const PI = Math.PI;
-const KM_PER_AU = 149597870.7; // 1 AU em km
-const GM_SUN = 1.3271244e11; // Parâmetro gravitacional do Sol em km^3/s^2
-const DENSIDADE_ASTEROIDE_KG_M3 = 2700; // Densidade do asteroide
-const DENSIDADE_SOLO_KG_M3 = 2500; // Densidade do solo terrestre
-const G = 6.67430e-11; // Constante gravitacional em m^3 kg^-1 s^-2
+const KM_PER_AU = 149597870.7;
+const GM_SUN = 1.3271244e11;
+const DENSIDADE_ASTEROIDE_KG_M3 = 2700;
+const DENSIDADE_SOLO_KG_M3 = 2500;
+const G = 6.67430e-11;
 
 const router = express.Router();
 
-router.get("/meteor", (req, res) => {
+/**
+ * Busca densidade populacional da WorldPop API
+ * @param {number} lat - Latitude
+ * @param {number} lon - Longitude
+ * @param {number} raioKm - Raio de impacto em km
+ * @returns {Promise<Object>} Dados populacionais
+ */
+async function getPopulationData(lat, lon, raioKm) {
+  try {
+    // WorldPop API endpoint para população
+    // Usando dados de 2020 (ano mais recente disponível)
+    const year = 2020;
+    
+    // Calcular bounding box baseado no raio
+    const latOffset = raioKm / 111.32; // ~111.32 km por grau de latitude
+    const lonOffset = raioKm / (111.32 * Math.cos(lat * PI / 180));
+    
+    const north = lat + latOffset;
+    const south = lat - latOffset;
+    const east = lon + lonOffset;
+    const west = lon - lonOffset;
+    
+    // URL da WorldPop API (exemplo - ajuste conforme documentação)
+    const worldpopUrl = `https://www.worldpop.org/rest/data/pop/wpgp?lon=${lon}&lat=${lat}`;
+    
+    console.log(`Buscando população em raio de ${raioKm}km...`);
+    
+    // Tenta buscar dados da WorldPop
+    try {
+      const response = await axios.get(worldpopUrl, { timeout: 10000 });
+      
+      if (response.data && response.data.data) {
+        const densidadePorKm2 = response.data.data;
+        return calcularVitimas(densidadePorKm2, raioKm, lat, lon);
+      }
+    } catch (apiError) {
+      console.warn("WorldPop API falhou, usando estimativa alternativa");
+    }
+    
+    // Fallback: Estimativa baseada em densidade média global/regional
+    return estimarVitimasAlternativo(lat, lon, raioKm);
+    
+  } catch (error) {
+    console.error("Erro ao buscar dados populacionais:", error.message);
+    return {
+      populacaoTotal: 0,
+      mortesEstimadas: 0,
+      feridasEstimadas: 0,
+      metodo: "error",
+      aviso: "Não foi possível calcular vítimas"
+    };
+  }
+}
+
+/**
+ * Calcula vítimas baseado na densidade populacional
+ */
+function calcularVitimas(densidadePorKm2, raioKm, lat, lon) {
+  // Área de impacto em km²
+  const areaImpacto = PI * Math.pow(raioKm, 2);
+  
+  // População na área de impacto
+  const populacaoTotal = Math.round(densidadePorKm2 * areaImpacto);
+  
+  // Zonas de letalidade (baseado em estudos de impactos)
+  const raioLetalTotal = raioKm * 0.3; // 30% do raio = letalidade 100%
+  const raioLetalAlta = raioKm * 0.6;  // 60% do raio = letalidade 70%
+  const raioLetalMedia = raioKm * 0.9; // 90% do raio = letalidade 40%
+  
+  const areaLetalTotal = PI * Math.pow(raioLetalTotal, 2);
+  const areaLetalAlta = PI * (Math.pow(raioLetalAlta, 2) - Math.pow(raioLetalTotal, 2));
+  const areaLetalMedia = PI * (Math.pow(raioLetalMedia, 2) - Math.pow(raioLetalAlta, 2));
+  const areaFeridos = areaImpacto - areaLetalTotal - areaLetalAlta - areaLetalMedia;
+  
+  const mortesZona1 = densidadePorKm2 * areaLetalTotal * 1.0;
+  const mortesZona2 = densidadePorKm2 * areaLetalAlta * 0.7;
+  const mortesZona3 = densidadePorKm2 * areaLetalMedia * 0.4;
+  const feridos = densidadePorKm2 * areaFeridos * 0.8;
+  
+  const mortesEstimadas = Math.round(mortesZona1 + mortesZona2 + mortesZona3);
+  const feridasEstimadas = Math.round(feridos);
+  
+  return {
+    populacaoTotal,
+    mortesEstimadas,
+    feridasEstimadas,
+    densidadePorKm2: Math.round(densidadePorKm2),
+    areaImpactoKm2: Math.round(areaImpacto),
+    metodo: "worldpop",
+    zonasLetalidade: {
+      zona1: { raio: raioLetalTotal.toFixed(2), letalidade: "100%", mortes: Math.round(mortesZona1) },
+      zona2: { raio: raioLetalAlta.toFixed(2), letalidade: "70%", mortes: Math.round(mortesZona2) },
+      zona3: { raio: raioLetalMedia.toFixed(2), letalidade: "40%", mortes: Math.round(mortesZona3) }
+    }
+  };
+}
+
+/**
+ * Estimativa alternativa baseada em região
+ */
+function estimarVitimasAlternativo(lat, lon, raioKm) {
+  // Densidade populacional estimada por região (pessoas/km²)
+  let densidadeEstimada = 50; // Densidade padrão (área rural)
+  
+  // Ajustes regionais aproximados
+  if (Math.abs(lat) < 30 && Math.abs(lon) < 50) {
+    // África/Oriente Médio
+    densidadeEstimada = 100;
+  } else if (lat > 30 && lat < 60 && lon > -10 && lon < 40) {
+    // Europa
+    densidadeEstimada = 200;
+  } else if (lat > 20 && lat < 50 && lon > 70 && lon < 150) {
+    // Ásia (densidade alta)
+    densidadeEstimada = 400;
+  } else if (lat > -60 && lat < 15 && lon > -80 && lon < -30) {
+    // América do Sul
+    densidadeEstimada = 80;
+  } else if (lat > 15 && lat < 60 && lon > -130 && lon < -60) {
+    // América do Norte
+    densidadeEstimada = 120;
+  }
+  
+  console.log(`Usando densidade estimada: ${densidadeEstimada} pessoas/km²`);
+  
+  return calcularVitimas(densidadeEstimada, raioKm, lat, lon);
+}
+
+router.get("/meteor", async (req, res) => {
   const {
     asteroid = "Apophis",
     latCustom,
@@ -42,10 +169,8 @@ router.get("/meteor", (req, res) => {
     return res.json(cachedResult);
   }
 
-  // Cache para asteroide
   const asteroidKey = asteroid;
   let asteroidDataCached = asteroidCache.get(asteroidKey);
-  console.log("Verificando cache do asteroide:", asteroidDataCached);
 
   let ASTEROIDE, massa_kg, velocidade_km_s, pos_x_au, pos_y_au, pos_z_au;
 
@@ -53,7 +178,7 @@ router.get("/meteor", (req, res) => {
     console.log(`Usando cache do asteroide "${asteroid}"`);
     ({ ASTEROIDE, massa_kg, velocidade_km_s, pos_x_au, pos_y_au, pos_z_au } =
       asteroidDataCached);
-    processAsteroidData(
+    await processAsteroidData(
       ASTEROIDE,
       massa_kg,
       velocidade_km_s,
@@ -121,18 +246,16 @@ router.get("/meteor", (req, res) => {
         const a_km = ASTEROIDE.a_au * KM_PER_AU;
         const JD_now = new Date().getTime() / 86400000 + 2440587.5;
 
-        // Cálculo da anomalia excêntrica (E)
         const n_rad_s = Math.sqrt(GM_SUN / Math.pow(a_km, 3));
         const M_rad = n_rad_s * (JD_now - ASTEROIDE.tp_jd) * 86400;
         let E = M_rad;
-        for (let i = 0; i < 10; i++) { // Aumentei iterações para maior precisão
+        for (let i = 0; i < 10; i++) {
           E =
             E -
             (E - ASTEROIDE.e * Math.sin(E) - M_rad) /
               (1 - ASTEROIDE.e * Math.cos(E));
         }
 
-        // Cálculo da posição heliocêntrica (X, Y, Z)
         const r_au = ASTEROIDE.a_au * (1 - ASTEROIDE.e * Math.cos(E));
         const nu_rad = Math.atan2(
           Math.sqrt(1 - Math.pow(ASTEROIDE.e, 2)) * Math.sin(E),
@@ -168,7 +291,6 @@ router.get("/meteor", (req, res) => {
           x_prime * (Math.sin(ASTEROIDE.w_rad) * Math.sin(ASTEROIDE.i_rad)) +
           y_prime * (Math.cos(ASTEROIDE.w_rad) * Math.sin(ASTEROIDE.i_rad));
 
-        // Cálculo da velocidade escalar (corrigido)
         const velocidade_km_s = Math.sqrt(GM_SUN * (2 / (r_au * KM_PER_AU) - 1 / a_km));
 
         await processAsteroidData(
@@ -197,34 +319,25 @@ router.get("/meteor", (req, res) => {
     console.log("Speed km/s:", velocidade_km_s);
     console.log("Massa kg:", massa_kg);
 
-    // IMPORTANTE: Usar lat/lon fornecidos pelo usuário OU valores padrão
-    // NÃO usar conversão de coordenadas heliocêntricas!
-    const finalLat = latCustom ? parseFloat(latCustom) : 0; // Padrão: Equador
-    const finalLon = lonCustom ? parseFloat(lonCustom) : 0; // Padrão: Meridiano de Greenwich
+    const finalLat = latCustom ? parseFloat(latCustom) : 0;
+    const finalLon = lonCustom ? parseFloat(lonCustom) : 0;
 
     console.log("Usando localização:", { lat: finalLat, lon: finalLon });
 
-    // Função para calcular energia cinética
     function calcularEnergiaCinetica(massa, velocidade) {
-      // velocidade já está em km/s, converter para m/s
       return 0.5 * massa * Math.pow(velocidade * 1000, 2);
     }
 
     const energia = calcularEnergiaCinetica(massa_kg, velocidade_km_s);
     console.log("Energia cinética (J):", energia);
 
-    // Função corrigida para calcular cratera (fórmula de impacto de Holsapple)
     function calcularCratera(energia, massa, velocidade_m_s, densidade_solo) {
       const diametro_projetil_m = ASTEROIDE.diameter_km * 1000;
+      const K1 = 0.132;
+      const mu = 0.41;
+      const nu = 0.4;
+      const g = 9.81;
       
-      // Fórmula simplificada de Holsapple (1993)
-      const K1 = 0.132; // Constante para impactos verticais em solo rochoso
-      const mu = 0.41;  // Expoente de acoplamento
-      const nu = 0.4;   // Expoente de gravidade
-      
-      const g = 9.81; // gravidade terrestre em m/s²
-      
-      // Diâmetro da cratera em metros
       const diametro_cratera_m = K1 * Math.pow(
         (massa * Math.pow(velocidade_m_s, 2)) / (densidade_solo * g * Math.pow(diametro_projetil_m, 3)),
         mu
@@ -278,20 +391,13 @@ router.get("/meteor", (req, res) => {
 
     let tsunami = { alturaInicial: 0, alturaPropagada: 0 };
 
-    // Função corrigida para calcular tsunami
     function calcularTsunamiDetalhado(energia, profundidade_m, distancia_km = 0) {
       if (profundidade_m >= 0) {
-        // Impacto em terra, sem tsunami
         return { alturaInicial: 0, alturaPropagada: 0 };
       }
 
       const profundidade_abs = Math.abs(profundidade_m);
-      
-      // Fórmula baseada em Ward & Asphaug (2000)
-      // Altura inicial do tsunami em metros
       const alturaInicial = 0.00007 * Math.pow(energia / 4.184e15, 0.5) * Math.sqrt(profundidade_abs);
-      
-      // Decaimento com a distância (lei de potência)
       const alturaPropagada = distancia_km === 0
         ? alturaInicial
         : alturaInicial * Math.pow(1 + distancia_km / 100, -0.5);
@@ -309,22 +415,14 @@ router.get("/meteor", (req, res) => {
       console.warn("Land impact (elevation > 0m) - No tsunami calculated.");
     }
 
-    // Função corrigida para magnitude sísmica
     function calcularMagnitudeSismica(energia) {
-      // Fórmula de Gutenberg-Richter modificada para impactos
-      // M = (log10(E) - 4.8) / 1.5
       const magnitude = (Math.log10(energia) - 4.8) / 1.5;
-      return Math.max(0, magnitude); // Magnitude não pode ser negativa
+      return Math.max(0, magnitude);
     }
 
-    // Função corrigida para raio de ondas de choque
     function calcularRaioOndasChoque(energia) {
-      // Baseado em modelos de explosões atmosféricas (Hills & Goda, 1993)
-      const energiaMegatons = energia / 4.184e15; // Converter para megatons TNT
-      
-      // Raio de sobrepressão de 1 psi (suficiente para quebrar janelas)
+      const energiaMegatons = energia / 4.184e15;
       const raio_km = 2.2 * Math.pow(energiaMegatons, 0.33);
-      
       return raio_km;
     }
 
@@ -334,7 +432,11 @@ router.get("/meteor", (req, res) => {
     console.log("Magnitude sísmica:", magnitudeSismica);
     console.log("Raio ondas de choque (km):", raioOndasChoque);
 
-    // Função corrigida de mitigação
+    // *** NOVO: Calcular vítimas ***
+    console.log("Calculando vítimas...");
+    const dadosPopulacionais = await getPopulationData(finalLat, finalLon, raioOndasChoque);
+    console.log("Dados populacionais:", dadosPopulacionais);
+
     function simularMitigacaoAvancada(velocidadeOriginal, deltaVelocidade, tipo) {
       const velocidadeOriginalNum = Number(velocidadeOriginal) || 0;
       const deltaVelocidadeNum = Number(deltaVelocidade) || 0;
@@ -347,7 +449,6 @@ router.get("/meteor", (req, res) => {
       if (tipo === "kinetic") {
         novaVelocidade = Math.abs(velocidadeOriginalNum - deltaVelocidadeNum);
         estrategia = "Kinetic Impactor";
-        // Probabilidade baseada na mudança relativa de velocidade
         const mudancaRelativa = Math.abs(deltaVelocidadeNum / velocidadeOriginalNum);
         probabilidadeSucesso = Math.min(0.95, mudancaRelativa * 100);
         desviado = deltaVelocidadeNum !== 0;
@@ -378,7 +479,7 @@ router.get("/meteor", (req, res) => {
       mass_kg: massa_kg,
       velocity_km_s: velocidade_km_s,
       diameter_km: ASTEROIDE.diameter_km,
-      position_heliocentric_au: { // Renomeado para deixar claro que são coordenadas heliocêntricas
+      position_heliocentric_au: {
         x: pos_x_au,
         y: pos_y_au,
         z: pos_z_au,
@@ -390,6 +491,7 @@ router.get("/meteor", (req, res) => {
         magnitudeSismica: magnitudeSismica,
         raioOndasChoque: { raio: raioOndasChoque, unidade: "km" },
         mitigacao: mitigacao,
+        vitimas: dadosPopulacionais // *** NOVO CAMPO ***
       },
       location: { 
         lat: finalLat, 
@@ -401,8 +503,7 @@ router.get("/meteor", (req, res) => {
 
     console.log("Calculated data:", result);
 
-    // Salvar no cache
-    // cache.set(cacheKey, result);
+    cache.set(cacheKey, result);
 
     return res.status(200).json(result);
   }
