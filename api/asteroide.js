@@ -8,9 +8,11 @@ const cache = new NodeCache({ stdTTL: 3600 });
 const URL_NASA_GET = "https://ssd-api.jpl.nasa.gov/sbdb_query.api";
 
 const PI = Math.PI;
-const KM_PER_AU = 149597870.7; // 1 Unidade Astronômica em km
-const GM_SUN = 1.3271244e11; // gravitacional do Sol em km^3/s^2
-const DENSIDADE_KG_M3 = 2700;
+const KM_PER_AU = 149597870.7; // 1 AU em km
+const GM_SUN = 1.3271244e11; // Parâmetro gravitacional do Sol em km^3/s^2
+const DENSIDADE_ASTEROIDE_KG_M3 = 2700; // Densidade do asteroide
+const DENSIDADE_SOLO_KG_M3 = 2500; // Densidade do solo terrestre
+const G = 6.67430e-11; // Constante gravitacional em m^3 kg^-1 s^-2
 
 const router = express.Router();
 
@@ -24,6 +26,9 @@ router.get("/meteor", (req, res) => {
     distanciaTsunami = 0,
     elevacaoCustom,
   } = req.query;
+
+  console.log("Momento inicial");
+  console.log(asteroid, latCustom, lonCustom, tipoMitigacao, deltaVelocidade, distanciaTsunami, elevacaoCustom);
 
   const cacheKey = `${req.query.asteroid || "Apophis"}-${
     req.query.deltaVelocidade || 0
@@ -40,6 +45,7 @@ router.get("/meteor", (req, res) => {
   // Cache para asteroide
   const asteroidKey = asteroid;
   let asteroidDataCached = asteroidCache.get(asteroidKey);
+  console.log("Verificando cache do asteroide:", asteroidDataCached);
 
   let ASTEROIDE, massa_kg, velocidade_km_s, pos_x_au, pos_y_au, pos_z_au;
 
@@ -47,7 +53,6 @@ router.get("/meteor", (req, res) => {
     console.log(`Usando cache do asteroide "${asteroid}"`);
     ({ ASTEROIDE, massa_kg, velocidade_km_s, pos_x_au, pos_y_au, pos_z_au } =
       asteroidDataCached);
-    // >>> EXECUTE O RESTO AQUI (sem axios)
     processAsteroidData(
       ASTEROIDE,
       massa_kg,
@@ -66,6 +71,7 @@ router.get("/meteor", (req, res) => {
     axios
       .get(`${URL_NASA_GET}?${endpoint}`)
       .then(async (response) => {
+        console.log("Resposta da API recebida.");
         if (
           !response.data ||
           !response.data.data ||
@@ -81,6 +87,8 @@ router.get("/meteor", (req, res) => {
           item[0].toLowerCase().includes(asteroid.toLowerCase())
         );
 
+        console.log("asteroidData encontrado:", asteroidData);
+
         if (!asteroidData) {
           console.log(`Asteroid "${asteroid}" not found.`);
           return res
@@ -88,14 +96,14 @@ router.get("/meteor", (req, res) => {
             .json({ error: `Asteroid "${asteroid}" not found.` });
         }
 
-        const diametro_km = parseFloat(asteroidData[1]); // Diâmetro em km
-        const DENSIDADE_KG_M3 = 2700; // Densidade típica de asteroide rochoso
-        const raio_m = (diametro_km / 2) * 1000; // Raio em metros
+        const diametro_km = parseFloat(asteroidData[1]);
+        const raio_m = (diametro_km / 2) * 1000;
         const volume_m3 = (4 / 3) * PI * Math.pow(raio_m, 3);
-        const massa_kg = DENSIDADE_KG_M3 * volume_m3; // Massa dinâmica
+        const massa_kg = DENSIDADE_ASTEROIDE_KG_M3 * volume_m3;
 
         const ASTEROIDE = {
           name: asteroidData[0].trim(),
+          diameter_km: diametro_km,
           a_au: parseFloat(asteroidData[2]),
           e: parseFloat(asteroidData[3]),
           i_rad: !isNaN(parseFloat(asteroidData[4]))
@@ -113,18 +121,18 @@ router.get("/meteor", (req, res) => {
         const a_km = ASTEROIDE.a_au * KM_PER_AU;
         const JD_now = new Date().getTime() / 86400000 + 2440587.5;
 
-        //  CÁLCULO DA ANOMALIA EXCÊNTRICA (E)
+        // Cálculo da anomalia excêntrica (E)
         const n_rad_s = Math.sqrt(GM_SUN / Math.pow(a_km, 3));
         const M_rad = n_rad_s * (JD_now - ASTEROIDE.tp_jd) * 86400;
         let E = M_rad;
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 10; i++) { // Aumentei iterações para maior precisão
           E =
             E -
             (E - ASTEROIDE.e * Math.sin(E) - M_rad) /
               (1 - ASTEROIDE.e * Math.cos(E));
         }
 
-        //  CÁLCULO DA POSIÇÃO (X, Y, Z)
+        // Cálculo da posição heliocêntrica (X, Y, Z)
         const r_au = ASTEROIDE.a_au * (1 - ASTEROIDE.e * Math.cos(E));
         const nu_rad = Math.atan2(
           Math.sqrt(1 - Math.pow(ASTEROIDE.e, 2)) * Math.sin(E),
@@ -160,23 +168,8 @@ router.get("/meteor", (req, res) => {
           x_prime * (Math.sin(ASTEROIDE.w_rad) * Math.sin(ASTEROIDE.i_rad)) +
           y_prime * (Math.cos(ASTEROIDE.w_rad) * Math.sin(ASTEROIDE.i_rad));
 
-        // CÁLCULO DA VELOCIDADE ESCALAR
-        const vp_km_s = Math.sqrt(GM_SUN / a_km);
-        const velocidade_km_s =
-          vp_km_s *
-          Math.sqrt((1 + ASTEROIDE.e) / (1 - ASTEROIDE.e)) *
-          Math.abs(1 - ASTEROIDE.e * Math.cos(E));
-
-        asteroidDataCached = {
-          ASTEROIDE,
-          massa_kg,
-          velocidade_km_s,
-          pos_x_au,
-          pos_y_au,
-          pos_z_au,
-        };
-        asteroidCache.set(asteroidKey, asteroidDataCached);
-        console.log(`Dados do asteroide "${asteroid}" salvos no cache`);
+        // Cálculo da velocidade escalar (corrigido)
+        const velocidade_km_s = Math.sqrt(GM_SUN * (2 / (r_au * KM_PER_AU) - 1 / a_km));
 
         await processAsteroidData(
           ASTEROIDE,
@@ -189,7 +182,7 @@ router.get("/meteor", (req, res) => {
       })
       .catch((error) => {
         console.log("Erro:", error);
-        return res.status(500).send("Internal Server Error");
+        return res.status(500).json({ error: "Internal Server Error" });
       });
   }
 
@@ -204,55 +197,48 @@ router.get("/meteor", (req, res) => {
     console.log("Speed km/s:", velocidade_km_s);
     console.log("Massa kg:", massa_kg);
 
+    // IMPORTANTE: Usar lat/lon fornecidos pelo usuário OU valores padrão
+    // NÃO usar conversão de coordenadas heliocêntricas!
+    const finalLat = latCustom ? parseFloat(latCustom) : 0; // Padrão: Equador
+    const finalLon = lonCustom ? parseFloat(lonCustom) : 0; // Padrão: Meridiano de Greenwich
+
+    console.log("Usando localização:", { lat: finalLat, lon: finalLon });
+
+    // Função para calcular energia cinética
     function calcularEnergiaCinetica(massa, velocidade) {
+      // velocidade já está em km/s, converter para m/s
       return 0.5 * massa * Math.pow(velocidade * 1000, 2);
     }
 
     const energia = calcularEnergiaCinetica(massa_kg, velocidade_km_s);
-    console.log("Energia cinética:", energia);
+    console.log("Energia cinética (J):", energia);
 
-    function calcularCratera(energia) {
-      const energiaEmTNT = energia / 4.184e9; // Converter para equivalente TNT (1 TNT = 4.184e9 J)
-      return 1.161 * Math.pow(energiaEmTNT / DENSIDADE_KG_M3, 0.78);
+    // Função corrigida para calcular cratera (fórmula de impacto de Holsapple)
+    function calcularCratera(energia, massa, velocidade_m_s, densidade_solo) {
+      const diametro_projetil_m = ASTEROIDE.diameter_km * 1000;
+      
+      // Fórmula simplificada de Holsapple (1993)
+      const K1 = 0.132; // Constante para impactos verticais em solo rochoso
+      const mu = 0.41;  // Expoente de acoplamento
+      const nu = 0.4;   // Expoente de gravidade
+      
+      const g = 9.81; // gravidade terrestre em m/s²
+      
+      // Diâmetro da cratera em metros
+      const diametro_cratera_m = K1 * Math.pow(
+        (massa * Math.pow(velocidade_m_s, 2)) / (densidade_solo * g * Math.pow(diametro_projetil_m, 3)),
+        mu
+      ) * diametro_projetil_m;
+      
+      return diametro_cratera_m;
     }
 
-    const cratera = calcularCratera(energia);
-    console.log("Cratera diametro:", cratera);
-
-    function cartesianToLatLon(x, y, z) {
-      console.log("Coordenadas recebidas:", x, y, z);
-
-      const R = 6371; // da Terra em km
-
-      if (Math.abs(z) > R) {
-        console.warn(
-          "Coordenada z fora do raio da Terra. Usando localização aproximada (lat=0, lon=calculada)."
-        );
-        const lon = (Math.atan2(y, x) * 180) / PI;
-        return { lat: 0, lon }; // Aproximação: assume impacto equatorial
-      }
-      const lat = (Math.asin(z / R) * 180) / PI;
-      const lon = (Math.atan2(y, x) * 180) / PI;
-
-      console.log("Lat/Lon calculados:", lat, lon);
-
-      return { lat, lon };
-    }
-
-    const { lat, lon } = cartesianToLatLon(
-      pos_x_au * KM_PER_AU,
-      pos_y_au * KM_PER_AU,
-      pos_z_au * KM_PER_AU
-    );
-
-    console.log("Lat/Lon calculados:", lat, lon);
-
-    const finalLat = latCustom ? parseFloat(latCustom) : lat;
-    const finalLon = lonCustom ? parseFloat(lonCustom) : lon;
+    const velocidade_m_s = velocidade_km_s * 1000;
+    const cratera = calcularCratera(energia, massa_kg, velocidade_m_s, DENSIDADE_SOLO_KG_M3);
+    console.log("Cratera diâmetro (m):", cratera);
 
     async function getElevation(lat, lon) {
       try {
-        // Tente USGS primeiro
         const usgsResponse = await fetch(
           `https://nationalmap.gov/epqs/pqs.php?x=${lon}&y=${lat}&units=Meters&output=json`
         );
@@ -264,11 +250,10 @@ router.get("/meteor", (req, res) => {
           }
         }
       } catch (error) {
-        console.warn("USGS falhou, tentando Open-Elevation...");
+        console.warn("USGS failed, trying Open-Elevation...");
       }
 
       try {
-        // Fallback para Open-Elevation
         const openElevationResponse = await fetch(
           `https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`
         );
@@ -279,85 +264,103 @@ router.get("/meteor", (req, res) => {
           }
         }
       } catch (error) {
-        console.error("Open-Elevation também falhou:", error);
+        console.error("Open-Elevation also failed:", error);
       }
 
-      // Fallback final: 0 (oceano)
-      console.warn("Ambas as APIs falharam, assumindo oceano (elevation=0)");
+      console.warn("Both APIs failed, assuming ocean (elevation=0)");
       return 0;
     }
 
     let elevation = elevacaoCustom
       ? parseFloat(elevacaoCustom)
       : await getElevation(finalLat, finalLon);
-    console.log("Elevation:", elevation);
-
-    // falta calculo para desastre natural
+    console.log("Elevation (m):", elevation);
 
     let tsunami = { alturaInicial: 0, alturaPropagada: 0 };
 
-    function calcularTsunamiDetalhado(
-      energia,
-      elevacaoCosteira,
-      distancia = 0
-    ) {
-      const alturaInicial = Math.sqrt(energia / 1e12) - elevacaoCosteira;
+    // Função corrigida para calcular tsunami
+    function calcularTsunamiDetalhado(energia, profundidade_m, distancia_km = 0) {
+      if (profundidade_m >= 0) {
+        // Impacto em terra, sem tsunami
+        return { alturaInicial: 0, alturaPropagada: 0 };
+      }
 
-      const alturaPropagada =
-        distancia === 0
-          ? alturaInicial // Sem decaimento se distancia = 0
-          : alturaInicial * Math.exp(-distancia / 1000); // Decaimento simplificado
+      const profundidade_abs = Math.abs(profundidade_m);
+      
+      // Fórmula baseada em Ward & Asphaug (2000)
+      // Altura inicial do tsunami em metros
+      const alturaInicial = 0.00007 * Math.pow(energia / 4.184e15, 0.5) * Math.sqrt(profundidade_abs);
+      
+      // Decaimento com a distância (lei de potência)
+      const alturaPropagada = distancia_km === 0
+        ? alturaInicial
+        : alturaInicial * Math.pow(1 + distancia_km / 100, -0.5);
+
       return {
-        alturaInicial: Math.max(0, alturaInicial), // Garante não negativo
-        alturaPropagada: Math.max(0, alturaPropagada), // Garante não negativo
+        alturaInicial: Math.max(0, alturaInicial),
+        alturaPropagada: Math.max(0, alturaPropagada),
       };
     }
 
     if (elevation <= 0) {
-      // Só calcula tsunami se for oceano
-      const tsunamiDetalhado = calcularTsunamiDetalhado(
-        energia,
-        elevation,
-        distanciaTsunami
-      );
-      tsunami = tsunamiDetalhado;
+      tsunami = calcularTsunamiDetalhado(energia, elevation, parseFloat(distanciaTsunami) || 0);
+      console.log("Tsunami calculado:", tsunami);
     } else {
-      console.warn(
-        "Impacto em terra (elevação > 0m) - Nenhum tsunami calculado."
-      );
+      console.warn("Land impact (elevation > 0m) - No tsunami calculated.");
     }
 
-    console.log("Tsunami altura:", tsunami);
+    // Função corrigida para magnitude sísmica
+    function calcularMagnitudeSismica(energia) {
+      // Fórmula de Gutenberg-Richter modificada para impactos
+      // M = (log10(E) - 4.8) / 1.5
+      const magnitude = (Math.log10(energia) - 4.8) / 1.5;
+      return Math.max(0, magnitude); // Magnitude não pode ser negativa
+    }
 
-    function simularMitigacaoAvancada(
-      velocidadeOriginal,
-      deltaVelocidade,
-      tipo
-    ) {
-      // Garantir que ambos sejam numbers
+    // Função corrigida para raio de ondas de choque
+    function calcularRaioOndasChoque(energia) {
+      // Baseado em modelos de explosões atmosféricas (Hills & Goda, 1993)
+      const energiaMegatons = energia / 4.184e15; // Converter para megatons TNT
+      
+      // Raio de sobrepressão de 1 psi (suficiente para quebrar janelas)
+      const raio_km = 2.2 * Math.pow(energiaMegatons, 0.33);
+      
+      return raio_km;
+    }
+
+    const magnitudeSismica = calcularMagnitudeSismica(energia);
+    const raioOndasChoque = calcularRaioOndasChoque(energia);
+
+    console.log("Magnitude sísmica:", magnitudeSismica);
+    console.log("Raio ondas de choque (km):", raioOndasChoque);
+
+    // Função corrigida de mitigação
+    function simularMitigacaoAvancada(velocidadeOriginal, deltaVelocidade, tipo) {
       const velocidadeOriginalNum = Number(velocidadeOriginal) || 0;
       const deltaVelocidadeNum = Number(deltaVelocidade) || 0;
 
       let novaVelocidade = velocidadeOriginalNum;
-      let estrategia = "Nenhuma";
+      let estrategia = "None";
       let probabilidadeSucesso = 0;
       let desviado = false;
 
       if (tipo === "kinetic") {
-        novaVelocidade = velocidadeOriginalNum + deltaVelocidadeNum; // Agora soma numbers
+        novaVelocidade = Math.abs(velocidadeOriginalNum - deltaVelocidadeNum);
         estrategia = "Kinetic Impactor";
-        probabilidadeSucesso = deltaVelocidadeNum > 0.01 ? 0.8 : 0.2;
+        // Probabilidade baseada na mudança relativa de velocidade
+        const mudancaRelativa = Math.abs(deltaVelocidadeNum / velocidadeOriginalNum);
+        probabilidadeSucesso = Math.min(0.95, mudancaRelativa * 100);
         desviado = deltaVelocidadeNum !== 0;
       } else if (tipo === "gravity") {
-        novaVelocidade =
-          velocidadeOriginalNum - Math.abs(deltaVelocidadeNum) * 0.1;
+        novaVelocidade = Math.abs(velocidadeOriginalNum - Math.abs(deltaVelocidadeNum) * 0.1);
         estrategia = "Gravity Tractor";
-        probabilidadeSucesso = Math.abs(deltaVelocidadeNum) > 0.005 ? 0.7 : 0.3;
+        const mudancaRelativa = Math.abs(deltaVelocidadeNum / velocidadeOriginalNum) * 0.1;
+        probabilidadeSucesso = Math.min(0.85, mudancaRelativa * 80);
         desviado = deltaVelocidadeNum !== 0;
       }
 
       return {
-        novaVelocidade: Number(novaVelocidade.toFixed(10)), // Agora funciona
+        novaVelocidade: Number(novaVelocidade.toFixed(10)),
         desviado,
         estrategia,
         probabilidadeSucesso,
@@ -367,46 +370,39 @@ router.get("/meteor", (req, res) => {
     const mitigacao = simularMitigacaoAvancada(
       velocidade_km_s,
       deltaVelocidade,
-      tipoMitigacao,
-      ASTEROIDE
+      tipoMitigacao
     );
-
-    // Nova função para magnitude sísmica (Richter)
-    function calcularMagnitudeSismica(energia) {
-      const energiaTNT = energia / 4.184e9;
-      return Math.log10(energiaTNT) - 4.8; // Fórmula aproximada
-    }
-
-    // Nova função para raio de ondas de choque (em km)
-    function calcularRaioOndasChoque(energia) {
-      const pressaoAr = 1e5; // Pa
-      return Math.sqrt(energia / pressaoAr) / 1000; // Converter m para km
-    }
-
-    const magnitudeSismica = calcularMagnitudeSismica(energia);
-    const raioOndasChoque = calcularRaioOndasChoque(energia);
 
     const result = {
       asteroidName: ASTEROIDE.name,
       mass_kg: massa_kg,
       velocity_km_s: velocidade_km_s,
-      position_km: {
-        x: pos_x_au * KM_PER_AU,
-        y: pos_y_au * KM_PER_AU,
-        z: pos_z_au * KM_PER_AU,
+      diameter_km: ASTEROIDE.diameter_km,
+      position_heliocentric_au: { // Renomeado para deixar claro que são coordenadas heliocêntricas
+        x: pos_x_au,
+        y: pos_y_au,
+        z: pos_z_au,
       },
       impacto: {
         energiaCinetica: energia,
-        cratera: { diametro: cratera, unidade: "metros" },
+        cratera: { diametro: cratera, unidade: "meters" },
         tsunami: tsunami,
         magnitudeSismica: magnitudeSismica,
         raioOndasChoque: { raio: raioOndasChoque, unidade: "km" },
         mitigacao: mitigacao,
       },
-      location: { lat: finalLat, lon: finalLon, elevation_m: elevation },
+      location: { 
+        lat: finalLat, 
+        lon: finalLon, 
+        elevation_m: elevation,
+        note: "Location is user-provided or default, not calculated from heliocentric coordinates"
+      },
     };
 
-    console.log("Dados calculados:", result);
+    console.log("Calculated data:", result);
+
+    // Salvar no cache
+    // cache.set(cacheKey, result);
 
     return res.status(200).json(result);
   }
