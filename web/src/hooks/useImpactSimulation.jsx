@@ -24,46 +24,7 @@ export const useImpactSimulation = () => {
 
     setIsLoading(true);
 
-    try {
-      // ===== MODO TESTE COM DADOS MOCKADOS =====
-      // console.log(" USANDO DADOS MOCKADOS PARA TESTE");
-
-      // Simula delay da API
-      // await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Dados de teste baseados na configuração
-      // const mockData = {
-      //   asteroidName: config.asteroid,
-      //   impacto: {
-      //     energiaCinetica: 2.5e15,
-      //     cratera: {
-      //       diametro: 800,
-      //     },
-      //     tsunami: {
-      //       alturaInicial: 50.5,
-      //       alturaPropagada: 12.3,
-      //     },
-      //     magnitudeSismica: 7.2,
-      //     raioOndasChoque: {
-      //       raio: 25,
-      //     },
-      //     mitigacao: {
-      //       estrategia:
-      //         config.tipoMitigacao === "kinetic"
-      //           ? "Kinetic Impactor"
-      //           : "Gravity Tractor",
-      //       probabilidadeSucesso:
-      //         config.tipoMitigacao === "kinetic" ? 0.75 : 0.85,
-      //     },
-      //   },
-      // };
-
-      // console.log("Dados mockados gerados:", mockData);
-      // setResultado(mockData);
-      // return mockData;
-
-      // ===== CÓDIGO ORIGINAL (DESCOMENTADO QUANDO BACKEND ESTIVER PRONTO) =====
-      
+    try {     
       const params = new URLSearchParams({
         latCustom: impactLocation.lat,
         lonCustom: impactLocation.lng,
@@ -73,9 +34,9 @@ export const useImpactSimulation = () => {
         distanciaTsunami: config.distanciaTsunami
       });
 
-      const URL_BASE = 'http://localhost:3000';
+      const API_URL = import.meta.env.MODE === 'production' ? '' : 'http://localhost:3000'
 
-      const url = `${URL_BASE}/api/meteor?${params}`;
+      const url = `${API_URL}/api/meteor?${params}`;
       console.log('URL da requisição:', url);
 
       const response = await fetch(url);
