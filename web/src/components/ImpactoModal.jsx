@@ -20,8 +20,8 @@ const ImpactoModal = ({ isOpen, onClose, data }) => {
         {/* Header */}
         <div className={styles.modalHeader}>
           <h2>
-            <span className={styles.asteroidIcon}>☄️</span>
-            Impact Results with:<br />
+            <span className={styles.asteroidIcon}></span>
+            Impact Results with:      
             {data.asteroidName}
           </h2>
         </div>
@@ -32,7 +32,7 @@ const ImpactoModal = ({ isOpen, onClose, data }) => {
             <div className={styles.content}>
               {/* Dados físicos do impacto */}
               <section className={styles.section}>
-                <h3>📊 Physical Impact Data</h3>
+                <h3> Physical Impact Data</h3>
                 <p>
                   <strong>Kinetic Energy</strong>
                   <span>{formatarCientifico(data.impacto.energiaCinetica)} J</span>
@@ -84,7 +84,7 @@ const ImpactoModal = ({ isOpen, onClose, data }) => {
                     </div>
                     
                     <p className={styles.injured}>
-                      <strong>🏥 Estimated Injured</strong>
+                      <strong> Estimated Injured</strong>
                       <span>{formatarNumero(vitimas.feridasEstimadas)}</span>
                     </p>
                     
