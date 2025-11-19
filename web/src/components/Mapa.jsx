@@ -9,6 +9,7 @@ import {
   formatCoordinates 
 } from "../utils/mapUtils";
 import { MAP_CONFIG } from "../constants/mapConfig";
+import { toast } from 'react-toastify'
 import ConfigSidebar from "./ConfigSidebar";
 import Asteroide from "./Asteroide";
 import ImpactoModal from "./ImpactoModal";
@@ -61,8 +62,26 @@ const Mapa = () => {
     console.log('Localização:', impactLocation);
     console.log('Config:', config);
 
-    // Busca dados do impacto ANTES da animação
-    const data = await fetchImpactData();
+    let data;
+    const id = toast.loading('Aguarde...', { position: 'top-center' })
+    try {
+      // Busca dados do impacto ANTES da animação
+      data = await fetchImpactData();
+      
+      toast.update(id, { 
+        render: 'Dados da simulação recebidos com sucesso!', 
+        type: 'success', 
+        isLoading: false, 
+        autoClose: 3000, 
+        position: 'top-center' 
+      });
+      
+    } catch (error) {
+      console.log('Erro ao buscar dados do impacto:', error);
+      alert('Erro ao buscar dados do impacto. Verifique o console para mais detalhes.');
+      return;
+    }
+
     console.log('Dados recebidos:', data);
 
     if (!data) {
