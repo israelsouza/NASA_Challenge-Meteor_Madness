@@ -1,5 +1,10 @@
-# Teamplate
+# Meteoro madnes
 
-React + NodeJS 
-ORM Prisma
-Banco de dados PostgreSQL
+Este projeto foi a resolução de um desafio de um Hackaton da nasa, em 2025.
+
+nesse projeto utilizamos as seguintes APIS:
+
+- Api MAPBOX
+- OpenStreetMap
+- Open-Elevation
+- USGS
